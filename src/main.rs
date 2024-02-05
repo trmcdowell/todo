@@ -53,16 +53,45 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                 continue;
             }
             match app.current_screen {
+                // Main screen
                 CurrentScreen::Main => match key.code {
-                    KeyCode::Esc | KeyCode::Char('q') => return Ok(()),
+                    KeyCode::Esc | KeyCode::Char('q') => {
+                        app.current_screen = CurrentScreen::Exiting;
+                    }
                     KeyCode::Char('c') | KeyCode::Char('C') => {
                         if key.modifiers == KeyModifiers::CONTROL {
                             return Ok(());
                         }
                     }
+                    KeyCode::Char('e') | KeyCode::Char('E') | KeyCode::Enter => {
+                        app.current_screen = CurrentScreen::Editing;
+                    }
                     _ => {}
                 },
-                _ => unimplemented!(),
+                // Editing screen
+                CurrentScreen::Editing => match key.code {
+                    KeyCode::Esc | KeyCode::Char('q') => app.current_screen = CurrentScreen::Main,
+                    KeyCode::Char('c') | KeyCode::Char('C') => {
+                        if key.modifiers == KeyModifiers::CONTROL {
+                            return Ok(());
+                        }
+                    }
+                    KeyCode::Char('j') | KeyCode::Down => app.increment_selected(),
+                    KeyCode::Char('k') | KeyCode::Up => app.decrement_selected(),
+                    _ => {}
+                },
+                CurrentScreen::Exiting => match key.code {
+                    KeyCode::Char('y') | KeyCode::Char('Y') => return Ok(()),
+                    KeyCode::Char('c') | KeyCode::Char('C') => {
+                        if key.modifiers == KeyModifiers::CONTROL {
+                            return Ok(());
+                        }
+                    }
+                    KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+                        app.current_screen = CurrentScreen::Main;
+                    }
+                    _ => {}
+                },
             }
         }
     }
