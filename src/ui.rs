@@ -1,38 +1,27 @@
+use crate::app::{App, CurrentScreen};
 use ratatui::{
     prelude::{Alignment, Constraint, Direction, Frame, Layout, Rect},
     style::{Color, Style},
-    text::{Line, Span, Text},
-    widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph},
+    text::{Line, Text},
+    widgets::{Block, BorderType, Clear, List, ListItem, Paragraph},
 };
 
-use crate::app::{App, CurrentScreen};
+// Main theme color
+static THEME_COLOR: Color = Color::Cyan;
 
-pub fn ui(frame: &mut Frame, app: &App) {
+pub fn ui(frame: &mut Frame, app: &mut App) {
     render_main_widget(frame, app);
     if let CurrentScreen::Exiting = app.current_screen {
-        frame.render_widget(Clear, frame.size());
-        let popup_block = Block::default()
-            .title(" Y/N ")
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .style(Style::default().bg(Color::Black));
-
-        let exit_text = Text::styled(
-            "Would you like to exit todo list?",
-            Style::default().fg(Color::White),
-        );
-        let exit_paragraph = Paragraph::new(exit_text).block(popup_block);
-        let area = centered_rect(60, 25, frame.size());
-        frame.render_widget(exit_paragraph, area);
+        render_exit_widget(frame);
     }
 }
 
 fn render_main_widget(frame: &mut Frame, app: &App) {
-    let main_block = Block::default()
+    let main_block = Block::bordered()
         .title(" TODO List ")
         .title_alignment(Alignment::Center)
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded);
+        .border_type(BorderType::Rounded)
+        .style(Style::default().fg(THEME_COLOR));
 
     // Create main todo list widget
     let list_items = build_list_items(app);
@@ -41,25 +30,40 @@ fn render_main_widget(frame: &mut Frame, app: &App) {
     frame.render_widget(todo_list, frame.size());
 }
 
-fn render_exit_widget(frame: &mut Frame, app: &mut App) {}
+fn render_exit_widget(frame: &mut Frame) {
+    frame.render_widget(Clear, frame.size());
+    let popup_block = Block::bordered()
+        .title(" Y/N ")
+        .border_type(BorderType::Rounded)
+        .style(Style::default().bg(Color::Black).fg(THEME_COLOR));
 
-// Build todo list items for ui
+    let exit_text = Line::styled(
+        "Would you like to exit todo list?",
+        Style::default().fg(THEME_COLOR),
+    );
+    let exit_paragraph = Paragraph::new(exit_text).block(popup_block);
+    let area = centered_rect(60, 25, frame.size());
+    frame.render_widget(exit_paragraph, area);
+}
+
+/// Build styled todo list items for ui
 fn build_list_items(app: &App) -> Vec<ListItem> {
     app.todo_list
         .iter()
         .enumerate()
         .map(|(idx, todo_str)| {
-            // If editing, show selected item
-            if app.current_screen == CurrentScreen::Editing && app.selected == idx {
-                return ListItem::new(Line::from(Span::styled(
+            // If selecting or editing, highlight selected item
+            if (app.current_screen == CurrentScreen::Selecting
+                || app.current_screen == CurrentScreen::Editing)
+                && app.selected == idx
+            {
+                return ListItem::new(Line::styled(
                     todo_str,
-                    Style::default().fg(Color::Black).bg(Color::White),
-                )));
+                    Style::default().fg(Color::Black).bg(THEME_COLOR),
+                ));
             } else {
-                return ListItem::new(Line::from(Span::styled(
-                    todo_str,
-                    Style::default().fg(Color::White),
-                )));
+                // Default item appearance
+                return ListItem::new(Line::styled(todo_str, Style::default().fg(THEME_COLOR)));
             }
         })
         .collect()
