@@ -46,15 +46,15 @@ fn render_mode_widget(app: &App, frame: &mut Frame, area: Rect) {
         match app.current_screen {
             CurrentScreen::Main => {
                 vec![
-                    Line::raw("Press 'e' or 'Enter' to enter selection mode."),
-                    Line::raw("Press 'q' or 'Esc' to quit."),
+                    Line::raw("Welcome to todo!"),
+                    Line::raw("Press 'q' or 'Esc' to save and quit."),
                 ]
             }
             CurrentScreen::Selecting => {
                 vec![
                     Line::raw(
-                        "Press 'j' or 'k' to navigate items and 'e' or 'Enter' to edit an item. 
-                         Add a new item with 'a', and delete items with 'd'.",
+                        "Press 'j' or 'k' to navigate items. Press 'e' or 'Enter' to edit an item. 
+                         Add a new item with 'a', and delete items with 'd'. Mark an item as completed with 'c'.",
                     ),
                     Line::raw("Press 'q' or 'Esc' to stop selecting."),
                 ]
@@ -68,10 +68,22 @@ fn render_mode_widget(app: &App, frame: &mut Frame, area: Rect) {
     frame.render_widget(mode_widget, area);
 }
 
+fn _render_help_widget(frame: &mut Frame) {
+    let popup_block = Block::bordered()
+        .title(" Help ")
+        .border_type(BorderType::Rounded)
+        .style(Style::default().fg(THEME_COLOR));
+
+    let exit_text = Line::styled("Test", Style::default().fg(THEME_COLOR));
+    let exit_paragraph = Paragraph::new(exit_text).block(popup_block);
+    let area = centered_rect(60, 25, frame.size());
+    frame.render_widget(exit_paragraph, area);
+}
+
 fn render_exit_widget(frame: &mut Frame) {
     frame.render_widget(Clear, frame.size());
     let popup_block = Block::bordered()
-        .title(" Exiting ")
+        .title(" Exit ")
         .border_type(BorderType::Rounded)
         .style(Style::default().fg(THEME_COLOR));
 
@@ -89,24 +101,24 @@ fn build_list_items(app: &App) -> Vec<ListItem> {
     app.todo_list
         .iter()
         .enumerate()
-        .map(|(idx, todo_str)| {
+        .map(|(idx, todo_item)| {
             if app.selected == idx {
                 match app.current_screen {
                     CurrentScreen::Selecting => {
                         return ListItem::new(Line::styled(
-                            format!(" [ ] {}", todo_str),
+                            format!(" {} {}", todo_item.completion_box(), todo_item),
                             Style::default().fg(Color::Black).bg(THEME_COLOR),
                         ));
                     }
                     CurrentScreen::Editing => {
                         return ListItem::new(Line::styled(
-                            format!(">[ ] {}", todo_str),
+                            format!(">{} {}", todo_item.completion_box(), todo_item),
                             Style::default().fg(Color::Black).bg(THEME_COLOR),
                         ));
                     }
                     _ => {
                         return ListItem::new(Line::styled(
-                            format!(" [ ] {}", todo_str),
+                            format!(" {} {}", todo_item.completion_box(), todo_item),
                             Style::default().fg(THEME_COLOR),
                         ));
                     }
@@ -114,7 +126,7 @@ fn build_list_items(app: &App) -> Vec<ListItem> {
             }
             // Default item appearance
             ListItem::new(Line::styled(
-                format!(" [ ] {}", todo_str),
+                format!(" [ ] {}", todo_item),
                 Style::default().fg(THEME_COLOR),
             ))
         })

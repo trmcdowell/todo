@@ -3,7 +3,7 @@ mod ui;
 
 use std::io;
 
-use app::{save_list, App, CurrentScreen};
+use app::{save_list, App, CurrentScreen, TodoItem};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
@@ -25,7 +25,7 @@ fn main() -> anyhow::Result<()> {
     // Setup app
     let mut app = App::new();
     let result = run_app(&mut terminal, &mut app);
-    let _ = save_list(app.todo_list)?;
+    save_list(app.todo_list)?;
 
     // Restore terminal
     disable_raw_mode()?;
@@ -66,10 +66,18 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                     KeyCode::Esc | KeyCode::Char('q') => {
                         app.current_screen = CurrentScreen::Exiting;
                     }
-                    KeyCode::Char('e') | KeyCode::Char('E') | KeyCode::Enter => {
+                    KeyCode::Char('e')
+                    | KeyCode::Char('E')
+                    | KeyCode::Char('j')
+                    | KeyCode::Char('J')
+                    | KeyCode::Char('k')
+                    | KeyCode::Char('K')
+                    | KeyCode::Up
+                    | KeyCode::Down
+                    | KeyCode::Enter => {
                         app.current_screen = CurrentScreen::Selecting;
                         if app.todo_list.is_empty() {
-                            app.todo_list.push("".to_string());
+                            app.todo_list.push(TodoItem::default());
                         }
                     }
                     _ => {}
@@ -81,6 +89,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                         if key.modifiers == KeyModifiers::CONTROL {
                             return Ok(());
                         }
+                        app.todo_list[app.selected].mark_item();
                     }
                     KeyCode::Char('j') | KeyCode::Down => app.increment_selected(),
                     KeyCode::Char('k') | KeyCode::Up => app.decrement_selected(),
@@ -88,13 +97,13 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                         app.current_screen = CurrentScreen::Editing;
                     }
                     KeyCode::Char('a') | KeyCode::Char('A') => {
-                        app.todo_list.push("".to_string());
+                        app.todo_list.push(TodoItem::default());
                         app.increment_selected();
                     }
                     KeyCode::Char('d') | KeyCode::Char('D') => {
                         app.todo_list.remove(app.selected);
-                        if app.selected == 0 {
-                            app.todo_list.push("".to_string())
+                        if app.selected == 0 && app.todo_list.is_empty() {
+                            app.todo_list.push(TodoItem::default())
                         }
                         if app.selected == app.todo_list.len() {
                             app.decrement_selected()
