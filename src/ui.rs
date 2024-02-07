@@ -2,23 +2,26 @@ use crate::app::{App, CurrentScreen};
 use ratatui::{
     prelude::{Alignment, Constraint, Direction, Frame, Layout, Rect},
     style::{Color, Style},
-    text::{Line, Text},
+    text::Line,
     widgets::{Block, BorderType, Clear, List, ListItem, Paragraph},
 };
 
 // Main theme color
-static THEME_COLOR: Color = Color::Cyan;
+const THEME_COLOR: Color = Color::LightGreen;
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
-    render_main_widget(frame, app);
+    let layout = Layout::vertical([Constraint::Percentage(90), Constraint::Percentage(10)])
+        .split(frame.size());
+    render_main_widget(app, frame, layout[0]);
+    render_mode_widget(app, frame, layout[1]);
     if let CurrentScreen::Exiting = app.current_screen {
         render_exit_widget(frame);
     }
 }
 
-fn render_main_widget(frame: &mut Frame, app: &App) {
+fn render_main_widget(app: &App, frame: &mut Frame, area: Rect) {
     let main_block = Block::bordered()
-        .title(" TODO List ")
+        .title(" TODO ")
         .title_alignment(Alignment::Center)
         .border_type(BorderType::Rounded)
         .style(Style::default().fg(THEME_COLOR));
@@ -27,18 +30,53 @@ fn render_main_widget(frame: &mut Frame, app: &App) {
     let list_items = build_list_items(app);
     let todo_list = List::new(list_items).block(main_block);
 
-    frame.render_widget(todo_list, frame.size());
+    frame.render_widget(todo_list, area);
+}
+
+fn render_mode_widget(app: &App, frame: &mut Frame, area: Rect) {
+    let mode_block = Block::bordered()
+        .title(format!(
+            " Current Mode: {} ",
+            app.current_screen.to_string()
+        ))
+        .border_type(BorderType::Rounded)
+        .style(Style::default().fg(THEME_COLOR));
+
+    let mode_widget = Paragraph::new({
+        match app.current_screen {
+            CurrentScreen::Main => {
+                vec![
+                    Line::raw("Press 'e' or 'Enter' to enter selection mode."),
+                    Line::raw("Press 'q' or 'Esc' to quit."),
+                ]
+            }
+            CurrentScreen::Selecting => {
+                vec![
+                    Line::raw(
+                        "Press 'j' or 'k' to navigate items and 'e' or 'Enter' to edit an item. 
+                         Add a new item with 'a', and delete items with 'd'.",
+                    ),
+                    Line::raw("Press 'q' or 'Esc' to stop selecting."),
+                ]
+            }
+            CurrentScreen::Editing => vec![Line::raw("Press 'Enter' or 'Esc' to stop editing.")],
+            _ => vec![],
+        }
+    })
+    .block(mode_block);
+
+    frame.render_widget(mode_widget, area);
 }
 
 fn render_exit_widget(frame: &mut Frame) {
     frame.render_widget(Clear, frame.size());
     let popup_block = Block::bordered()
-        .title(" Y/N ")
+        .title(" Exiting ")
         .border_type(BorderType::Rounded)
-        .style(Style::default().bg(Color::Black).fg(THEME_COLOR));
+        .style(Style::default().fg(THEME_COLOR));
 
     let exit_text = Line::styled(
-        "Would you like to exit todo list?",
+        "Would you like to quit todo? (Y/N)",
         Style::default().fg(THEME_COLOR),
     );
     let exit_paragraph = Paragraph::new(exit_text).block(popup_block);
@@ -52,19 +90,33 @@ fn build_list_items(app: &App) -> Vec<ListItem> {
         .iter()
         .enumerate()
         .map(|(idx, todo_str)| {
-            // If selecting or editing, highlight selected item
-            if (app.current_screen == CurrentScreen::Selecting
-                || app.current_screen == CurrentScreen::Editing)
-                && app.selected == idx
-            {
-                return ListItem::new(Line::styled(
-                    todo_str,
-                    Style::default().fg(Color::Black).bg(THEME_COLOR),
-                ));
-            } else {
-                // Default item appearance
-                return ListItem::new(Line::styled(todo_str, Style::default().fg(THEME_COLOR)));
+            if app.selected == idx {
+                match app.current_screen {
+                    CurrentScreen::Selecting => {
+                        return ListItem::new(Line::styled(
+                            format!("  {}", todo_str),
+                            Style::default().fg(Color::Black).bg(THEME_COLOR),
+                        ));
+                    }
+                    CurrentScreen::Editing => {
+                        return ListItem::new(Line::styled(
+                            format!("> {}", todo_str),
+                            Style::default().fg(Color::Black).bg(THEME_COLOR),
+                        ));
+                    }
+                    _ => {
+                        return ListItem::new(Line::styled(
+                            format!("  {}", todo_str),
+                            Style::default().fg(THEME_COLOR),
+                        ));
+                    }
+                }
             }
+            // Default item appearance
+            ListItem::new(Line::styled(
+                format!("  {}", todo_str),
+                Style::default().fg(THEME_COLOR),
+            ))
         })
         .collect()
 }

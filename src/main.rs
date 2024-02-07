@@ -3,7 +3,7 @@ mod ui;
 
 use std::io;
 
-use app::{App, CurrentScreen};
+use app::{save_list, App, CurrentScreen};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
@@ -21,8 +21,11 @@ fn main() -> anyhow::Result<()> {
     execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
+
+    // Setup app
     let mut app = App::new();
     let result = run_app(&mut terminal, &mut app);
+    let _ = save_list(app.todo_list)?;
 
     // Restore terminal
     disable_raw_mode()?;
@@ -65,6 +68,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                     }
                     KeyCode::Char('e') | KeyCode::Char('E') | KeyCode::Enter => {
                         app.current_screen = CurrentScreen::Selecting;
+                        if app.todo_list.is_empty() {
+                            app.todo_list.push("".to_string());
+                        }
                     }
                     _ => {}
                 },
@@ -81,6 +87,16 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                     KeyCode::Char('e') | KeyCode::Char('E') | KeyCode::Enter => {
                         app.current_screen = CurrentScreen::Editing;
                     }
+                    KeyCode::Char('a') | KeyCode::Char('A') => {
+                        app.todo_list.push("".to_string());
+                        app.increment_selected();
+                    }
+                    KeyCode::Char('d') | KeyCode::Char('D') => {
+                        app.todo_list.remove(app.selected);
+                        if app.selected == 0 {
+                            app.todo_list.push("".to_string())
+                        }
+                    }
                     _ => {}
                 },
                 // Editing mode
@@ -89,7 +105,10 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                         return Ok(());
                     }
                     (KeyCode::Esc | KeyCode::Enter, _) => {
-                        app.current_screen = CurrentScreen::Selecting
+                        app.current_screen = CurrentScreen::Selecting;
+                        if app.todo_list[app.selected].is_empty() {
+                            app.todo_list.remove(app.selected);
+                        }
                     }
                     (KeyCode::Backspace | KeyCode::Delete, _) => {
                         app.todo_list[app.selected].pop();
@@ -101,7 +120,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                 },
                 // Exit screen
                 CurrentScreen::Exiting => match key.code {
-                    KeyCode::Char('y') | KeyCode::Char('Y') => return Ok(()),
+                    KeyCode::Char('y') | KeyCode::Char('Y') => {
+                        return Ok(());
+                    }
                     KeyCode::Char('c') | KeyCode::Char('C') => {
                         if key.modifiers == KeyModifiers::CONTROL {
                             return Ok(());
