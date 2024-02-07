@@ -96,6 +96,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                         if app.selected == 0 {
                             app.todo_list.push("".to_string())
                         }
+                        if app.selected == app.todo_list.len() {
+                            app.decrement_selected()
+                        }
                     }
                     _ => {}
                 },

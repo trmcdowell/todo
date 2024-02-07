@@ -94,19 +94,19 @@ fn build_list_items(app: &App) -> Vec<ListItem> {
                 match app.current_screen {
                     CurrentScreen::Selecting => {
                         return ListItem::new(Line::styled(
-                            format!("  {}", todo_str),
+                            format!(" [ ] {}", todo_str),
                             Style::default().fg(Color::Black).bg(THEME_COLOR),
                         ));
                     }
                     CurrentScreen::Editing => {
                         return ListItem::new(Line::styled(
-                            format!("> {}", todo_str),
+                            format!(">[ ] {}", todo_str),
                             Style::default().fg(Color::Black).bg(THEME_COLOR),
                         ));
                     }
                     _ => {
                         return ListItem::new(Line::styled(
-                            format!("  {}", todo_str),
+                            format!(" [ ] {}", todo_str),
                             Style::default().fg(THEME_COLOR),
                         ));
                     }
@@ -114,7 +114,7 @@ fn build_list_items(app: &App) -> Vec<ListItem> {
             }
             // Default item appearance
             ListItem::new(Line::styled(
-                format!("  {}", todo_str),
+                format!(" [ ] {}", todo_str),
                 Style::default().fg(THEME_COLOR),
             ))
         })
