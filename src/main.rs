@@ -101,12 +101,25 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                         app.increment_selected();
                     }
                     KeyCode::Char('d') | KeyCode::Char('D') => {
-                        app.todo_list.remove(app.selected);
-                        if app.selected == 0 && app.todo_list.is_empty() {
-                            app.todo_list.push(TodoItem::default())
+                        if key.modifiers == KeyModifiers::CONTROL {
+                            app.todo_list = app
+                                .todo_list
+                                .clone()
+                                .into_iter()
+                                .filter(|x| x.completed)
+                                .collect();
+                            if app.selected >= app.todo_list.len() && !app.todo_list.is_empty() {
+                                app.selected = app.todo_list.len() - 1;
+                            }
+                        } else {
+                            app.todo_list.remove(app.selected);
+                            if app.selected == app.todo_list.len() {
+                                app.decrement_selected()
+                            }
                         }
-                        if app.selected == app.todo_list.len() {
-                            app.decrement_selected()
+                        if app.todo_list.is_empty() {
+                            app.selected = 0;
+                            app.todo_list.push(TodoItem::default())
                         }
                     }
                     _ => {}

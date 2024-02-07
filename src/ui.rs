@@ -126,7 +126,7 @@ fn build_list_items(app: &App) -> Vec<ListItem> {
             }
             // Default item appearance
             ListItem::new(Line::styled(
-                format!(" [ ] {}", todo_item),
+                format!(" {} {}", todo_item.completion_box(), todo_item),
                 Style::default().fg(THEME_COLOR),
             ))
         })

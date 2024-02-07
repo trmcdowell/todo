@@ -57,10 +57,10 @@ struct TodoItems {
     items: Vec<TodoItem>,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct TodoItem {
     item: String,
-    completed: bool,
+    pub completed: bool,
 }
 
 impl TodoItem {
