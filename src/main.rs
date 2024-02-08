@@ -3,7 +3,7 @@ mod ui;
 
 use std::io;
 
-use app::{save_list, App, CurrentScreen, TodoItem};
+use app::{save_todo_list, App, CurrentScreen, TodoItem};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
@@ -25,7 +25,7 @@ fn main() -> anyhow::Result<()> {
     // Setup app
     let mut app = App::new();
     let result = run_app(&mut terminal, &mut app);
-    save_list(app.todo_list)?;
+    save_todo_list(app.todo_list)?;
 
     // Restore terminal
     disable_raw_mode()?;
@@ -80,37 +80,51 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                             app.todo_list.push(TodoItem::default());
                         }
                     }
+                    KeyCode::Char('d') => {
+                        if key.modifiers == KeyModifiers::CONTROL {
+                            app.remove_completed_items()
+                        }
+                    }
                     _ => {}
                 },
                 // Selecting screen
                 CurrentScreen::Selecting => match key.code {
-                    KeyCode::Esc | KeyCode::Char('q') => app.current_screen = CurrentScreen::Main,
+                    // Exit selecting
+                    KeyCode::Esc | KeyCode::Char('q') => {
+                        app.current_screen = CurrentScreen::Main;
+                        app.remove_empty_items();
+                    }
+
+                    // Mark item completed with c or x, quit app with ctrl + c
                     KeyCode::Char('c') | KeyCode::Char('C') => {
                         if key.modifiers == KeyModifiers::CONTROL {
                             return Ok(());
                         }
                         app.todo_list[app.selected].mark_item();
                     }
+                    KeyCode::Char('x') | KeyCode::Char('X') => {
+                        app.todo_list[app.selected].mark_item()
+                    }
+
+                    // Item selection
                     KeyCode::Char('j') | KeyCode::Down => app.increment_selected(),
                     KeyCode::Char('k') | KeyCode::Up => app.decrement_selected(),
+
+                    // Edit selected item
                     KeyCode::Char('e') | KeyCode::Char('E') | KeyCode::Enter => {
                         app.current_screen = CurrentScreen::Editing;
                     }
+
+                    // Add item
                     KeyCode::Char('a') | KeyCode::Char('A') => {
                         app.todo_list.push(TodoItem::default());
                         app.increment_selected();
                     }
+
+                    // Delete an item with d or all completed items with ctrl + d
                     KeyCode::Char('d') | KeyCode::Char('D') => {
                         if key.modifiers == KeyModifiers::CONTROL {
-                            app.todo_list = app
-                                .todo_list
-                                .clone()
-                                .into_iter()
-                                .filter(|x| x.completed)
-                                .collect();
-                            if app.selected >= app.todo_list.len() && !app.todo_list.is_empty() {
-                                app.selected = app.todo_list.len() - 1;
-                            }
+                            app.remove_completed_items()
                         } else {
                             app.todo_list.remove(app.selected);
                             if app.selected == app.todo_list.len() {

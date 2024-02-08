@@ -30,6 +30,30 @@ impl App {
             self.selected -= 1;
         }
     }
+
+    pub fn remove_completed_items(&mut self) {
+        self.todo_list = self
+            .todo_list
+            .clone()
+            .into_iter()
+            .filter(|x| !x.completed)
+            .collect();
+        if self.selected >= self.todo_list.len() && !self.todo_list.is_empty() {
+            self.selected = self.todo_list.len() - 1;
+        }
+    }
+
+    pub fn remove_empty_items(&mut self) {
+        self.todo_list = self
+            .todo_list
+            .clone()
+            .into_iter()
+            .filter(|x| x.item.trim() != "")
+            .collect();
+        if self.selected >= self.todo_list.len() && !self.todo_list.is_empty() {
+            self.selected = self.todo_list.len() - 1;
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -102,16 +126,11 @@ fn get_saved_list() -> anyhow::Result<Vec<TodoItem>> {
 }
 
 // Write items to todo_list.json
-pub fn save_list(todo_list: Vec<TodoItem>) -> anyhow::Result<()> {
-    // filter out whitespace items
-    let todo_list: Vec<TodoItem> = todo_list
-        .into_iter()
-        .filter(|x| x.item.trim() != "")
-        .collect();
-    let saved_items = TodoItems { items: todo_list };
+pub fn save_todo_list(todo_list: Vec<TodoItem>) -> anyhow::Result<()> {
+    let save_items = TodoItems { items: todo_list };
     fs::write(
         "todo_list.json",
-        serde_json::to_string(&saved_items).unwrap(),
+        serde_json::to_string(&save_items).unwrap(),
     )?;
 
     Ok(())
