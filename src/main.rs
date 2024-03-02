@@ -140,10 +140,6 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                                 app.decrement_selected()
                             }
                         }
-                        // if app.todo_list.is_empty() {
-                        //     app.selected = 0;
-                        //     app.todo_list.push(TodoItem::default())
-                        // }
                     }
                     _ => {}
                 },
