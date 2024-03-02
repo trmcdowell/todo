@@ -95,10 +95,6 @@ impl TodoItem {
         "[ ]"
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.item.is_empty()
-    }
-
     pub fn mark_item(&mut self) {
         self.completed = !self.completed
     }

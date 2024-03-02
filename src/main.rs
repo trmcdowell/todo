@@ -153,10 +153,6 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                         return Ok(());
                     }
                     (KeyCode::Esc | KeyCode::Enter, _) => {
-                        if app.todo_list[app.selected].is_empty() {
-                            app.todo_list.remove(app.selected);
-                            app.decrement_selected();
-                        }
                         app.current_screen = CurrentScreen::Selecting;
                     }
                     (KeyCode::Backspace | KeyCode::Delete, _) => {

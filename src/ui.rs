@@ -47,16 +47,14 @@ fn render_mode_widget(app: &App, frame: &mut Frame, area: Rect) {
             CurrentScreen::Main => {
                 vec![
                     Line::raw("Welcome to todo!"),
-                    Line::raw("Press 'q' or 'Esc' to save and quit."),
+                    Line::raw("[Enter] select mode, [q] or [Esc] to save and quit"),
                 ]
             }
             CurrentScreen::Selecting => {
                 vec![
                     Line::raw(
-                        "Press 'j' or 'k' to navigate items. Press 'e' or 'Enter' to edit an item. 
-                         Add a new item with 'n', and delete items with 'd'. Mark an item as completed with 'c'.",
+                        "[j] and [k] to navigate, [e]dit item, [n]ew item, [d]elete item, [c]omplete item, [q]uit" 
                     ),
-                    Line::raw("Press 'q' or 'Esc' to stop selecting."),
                 ]
             }
             CurrentScreen::Editing => vec![Line::raw("Press 'Enter' or 'Esc' to stop editing.")],
