@@ -112,7 +112,7 @@ fn build_list_items(app: &App) -> Vec<ListItem> {
                     }
                     CurrentScreen::Editing => {
                         return ListItem::new(Line::styled(
-                            format!(">{} {}", todo_item.completion_box(), todo_item),
+                            format!(">{} {}_", todo_item.completion_box(), todo_item),
                             Style::default().fg(Color::Black).bg(THEME_COLOR),
                         ));
                     }
