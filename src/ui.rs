@@ -54,7 +54,7 @@ fn render_mode_widget(app: &App, frame: &mut Frame, area: Rect) {
                 vec![
                     Line::raw(
                         "Press 'j' or 'k' to navigate items. Press 'e' or 'Enter' to edit an item. 
-                         Add a new item with 'a', and delete items with 'd'. Mark an item as completed with 'c'.",
+                         Add a new item with 'n', and delete items with 'd'. Mark an item as completed with 'c'.",
                     ),
                     Line::raw("Press 'q' or 'Esc' to stop selecting."),
                 ]

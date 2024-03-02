@@ -76,9 +76,6 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                     | KeyCode::Down
                     | KeyCode::Enter => {
                         app.current_screen = CurrentScreen::Selecting;
-                        if app.todo_list.is_empty() {
-                            app.todo_list.push(TodoItem::default());
-                        }
                     }
                     KeyCode::Char('d') => {
                         if key.modifiers == KeyModifiers::CONTROL {
@@ -100,10 +97,14 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                         if key.modifiers == KeyModifiers::CONTROL {
                             return Ok(());
                         }
-                        app.todo_list[app.selected].mark_item();
+                        if !app.todo_list.is_empty() {
+                            app.todo_list[app.selected].mark_item();
+                        }
                     }
                     KeyCode::Char('x') | KeyCode::Char('X') => {
-                        app.todo_list[app.selected].mark_item()
+                        if !app.todo_list.is_empty() {
+                            app.todo_list[app.selected].mark_item();
+                        }
                     }
 
                     // Item selection
@@ -111,12 +112,20 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                     KeyCode::Char('k') | KeyCode::Up => app.decrement_selected(),
 
                     // Edit selected item
-                    KeyCode::Char('e') | KeyCode::Char('E') | KeyCode::Enter => {
+                    KeyCode::Char('a')
+                    | KeyCode::Char('A')
+                    | KeyCode::Char('e')
+                    | KeyCode::Char('E')
+                    | KeyCode::Enter => {
+                        if app.todo_list.is_empty() {
+                            app.todo_list.push(TodoItem::default());
+                            app.increment_selected();
+                        }
                         app.current_screen = CurrentScreen::Editing;
                     }
 
-                    // Add item
-                    KeyCode::Char('a') | KeyCode::Char('A') => {
+                    // Add new item
+                    KeyCode::Char('n') | KeyCode::Char('N') => {
                         app.todo_list.push(TodoItem::default());
                         app.increment_selected();
                     }
@@ -125,16 +134,16 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                     KeyCode::Char('d') | KeyCode::Char('D') => {
                         if key.modifiers == KeyModifiers::CONTROL {
                             app.remove_completed_items()
-                        } else {
+                        } else if !app.todo_list.is_empty() {
                             app.todo_list.remove(app.selected);
                             if app.selected == app.todo_list.len() {
                                 app.decrement_selected()
                             }
                         }
-                        if app.todo_list.is_empty() {
-                            app.selected = 0;
-                            app.todo_list.push(TodoItem::default())
-                        }
+                        // if app.todo_list.is_empty() {
+                        //     app.selected = 0;
+                        //     app.todo_list.push(TodoItem::default())
+                        // }
                     }
                     _ => {}
                 },
@@ -144,10 +153,11 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
                         return Ok(());
                     }
                     (KeyCode::Esc | KeyCode::Enter, _) => {
-                        app.current_screen = CurrentScreen::Selecting;
                         if app.todo_list[app.selected].is_empty() {
                             app.todo_list.remove(app.selected);
+                            app.decrement_selected();
                         }
+                        app.current_screen = CurrentScreen::Selecting;
                     }
                     (KeyCode::Backspace | KeyCode::Delete, _) => {
                         app.todo_list[app.selected].pop();

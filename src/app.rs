@@ -76,7 +76,7 @@ impl ToString for CurrentScreen {
 }
 
 // Struct used for deserializing saved data
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 struct TodoItems {
     items: Vec<TodoItem>,
 }
