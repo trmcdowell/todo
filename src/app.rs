@@ -19,14 +19,14 @@ impl App {
     }
 
     pub fn increment_selected(&mut self) {
-        if self.selected < self.todo_list.len() - 1 {
+        if !self.todo_list.is_empty() && self.selected < self.todo_list.len() - 1 {
             self.selected += 1;
         }
     }
 
     // != because val < 0 is not possible with usize and it may error
     pub fn decrement_selected(&mut self) {
-        if self.selected != 0 {
+        if !self.todo_list.is_empty() && self.selected != 0 {
             self.selected -= 1;
         }
     }
