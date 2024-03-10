@@ -117,13 +117,14 @@ impl fmt::Display for TodoItem {
 /// Note that path to todo_list.json may not work on windows (/ instead of \\)
 fn get_saved_list() -> anyhow::Result<Vec<TodoItem>> {
     let path = format!(
-        "{}/todo/todo_list.json",
+        "{}/todo",
         dirs::config_dir()
             .expect("Could not find config dir")
             .to_str()
             .unwrap()
     );
-    let json = String::from_utf8(fs::read(path)?)?;
+    std::fs::create_dir_all(&path)?;
+    let json = String::from_utf8(fs::read(format!("{}/todo_list.json", path))?)?;
     let saved_items: TodoItems = serde_json::from_str(&json)?;
     Ok(saved_items.items)
 }
