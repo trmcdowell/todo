@@ -9,7 +9,6 @@ pub struct App {
 }
 
 impl App {
-    // if get_saved_list errors, return vec with empty string to avoid selection errors
     pub fn new() -> App {
         App {
             current_screen: CurrentScreen::Main,
@@ -114,20 +113,32 @@ impl fmt::Display for TodoItem {
     }
 }
 
-// Get saved items from todo_list.json
+/// Get saved items from todo_list.json
+/// Note that path to todo_list.json may not work on windows (/ instead of \\)
 fn get_saved_list() -> anyhow::Result<Vec<TodoItem>> {
-    let json = String::from_utf8(fs::read("todo_list.json")?)?;
+    let path = format!(
+        "{}/todo/todo_list.json",
+        dirs::config_dir()
+            .expect("Could not find config dir")
+            .to_str()
+            .unwrap()
+    );
+    let json = String::from_utf8(fs::read(path)?)?;
     let saved_items: TodoItems = serde_json::from_str(&json)?;
     Ok(saved_items.items)
 }
 
 // Write items to todo_list.json
 pub fn save_todo_list(todo_list: Vec<TodoItem>) -> anyhow::Result<()> {
+    let path = format!(
+        "{}/todo/todo_list.json",
+        dirs::config_dir()
+            .expect("Could not find config dir")
+            .to_str()
+            .unwrap()
+    );
     let save_items = TodoItems { items: todo_list };
-    fs::write(
-        "todo_list.json",
-        serde_json::to_string(&save_items).unwrap(),
-    )?;
+    fs::write(path, serde_json::to_string(&save_items).unwrap())?;
 
     Ok(())
 }
