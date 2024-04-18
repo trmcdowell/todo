@@ -46,7 +46,6 @@ fn render_mode_widget(app: &App, frame: &mut Frame, area: Rect) {
         match app.current_screen {
             CurrentScreen::Main => {
                 vec![
-                    Line::raw("Welcome to todo!"),
                     Line::raw("[Enter] select mode, [q] or [Esc] to save and quit"),
                 ]
             }
