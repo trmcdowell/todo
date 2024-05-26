@@ -72,11 +72,11 @@ impl App {
                         (KeyCode::Esc | KeyCode::Enter, _) => self.current_mode = Mode::Selecting,
                         (KeyCode::Backspace | KeyCode::Delete, _) => {
                             let item_idx = self.items.state.selected().unwrap();
-                            self.items.items[item_idx].item.pop();
+                            self.items.items[item_idx].text.pop();
                         }
                         (KeyCode::Char(char), _) => {
                             let item_idx = self.items.state.selected().unwrap();
-                            self.items.items[item_idx].item.push(char);
+                            self.items.items[item_idx].text.push(char);
                         }
                         _ => {}
                     },
@@ -183,14 +183,14 @@ struct TodoItems {
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct TodoItem {
-    pub item: String,
+    pub text: String,
     pub status: bool,
 }
 
 impl TodoItem {
     fn _new(item: &str, status: bool) -> Self {
         TodoItem {
-            item: item.to_string(),
+            text: item.to_string(),
             status,
         }
     }

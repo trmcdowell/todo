@@ -20,18 +20,18 @@ fn main() -> anyhow::Result<()> {
     // Setup terminal
     let mut terminal = init_terminal()?;
 
-    // Setup app
+    // Setup and run app
     let saved_items = get_saved_list().unwrap_or_default();
     let mut app = App::new(saved_items);
     let result = app.run(&mut terminal);
 
-    // Save list data
-    save_todo_list(app.items)?;
-
-    // Restore terminal
+    // Restore terminal after quitting app
     restore_terminal()?;
 
-    // Print error if one occurs
+    // Save list state data
+    save_todo_list(app.items)?;
+
+    // Print error if one occured
     if let Err(e) = result {
         println!("{e:?}");
     }
@@ -76,7 +76,11 @@ pub fn save_todo_list(todo_list: TodoList) -> anyhow::Result<()> {
             .to_str()
             .unwrap()
     );
-    let save_items: Vec<TodoItem> = todo_list.items;
+    let save_items: Vec<TodoItem> = todo_list
+        .items
+        .into_iter()
+        .filter(|item| !item.text.is_empty())
+        .collect();
     fs::write(path, serde_json::to_string(&save_items).unwrap())?;
     Ok(())
 }

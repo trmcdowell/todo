@@ -91,9 +91,9 @@ impl TodoItem {
                     && selected_idx.unwrap() == item_idx
                     && mode == &Mode::Editing
                 {
-                    format!(" ☐ {}_", self.item)
+                    format!(" ☐ {}_", self.text)
                 } else {
-                    format!(" ☐ {}", self.item)
+                    format!(" ☐ {}", self.text)
                 };
                 Line::styled(text, Style::default())
             }
@@ -102,9 +102,9 @@ impl TodoItem {
                     && selected_idx.unwrap() == item_idx
                     && mode == &Mode::Editing
                 {
-                    format!(" ✓ {}_", self.item)
+                    format!(" ✓ {}_", self.text)
                 } else {
-                    format!(" ✓ {}", self.item)
+                    format!(" ✓ {}", self.text)
                 };
                 Line::styled(text, Style::default())
             }
