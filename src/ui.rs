@@ -1,154 +1,115 @@
-use crate::app::{App, CurrentScreen};
 use ratatui::{
-    prelude::{Alignment, Constraint, Direction, Frame, Layout, Rect},
-    style::{Color, Style},
+    layout::{Alignment, Constraint, Layout},
+    prelude,
+    style::{palette::tailwind, Color, Modifier, Style},
     text::Line,
-    widgets::{Block, BorderType, Clear, List, ListItem, Paragraph},
+    widgets::{
+        Block, BorderType, HighlightSpacing, List, ListItem, Paragraph, StatefulWidget, Widget,
+    },
 };
 
-// Main theme color
-const THEME_COLOR: Color = Color::LightGreen;
+use crate::app::{App, Mode, TodoItem};
 
-pub fn ui(frame: &mut Frame, app: &mut App) {
-    let layout = Layout::vertical([Constraint::Percentage(90), Constraint::Percentage(10)])
-        .split(frame.size());
-    render_main_widget(app, frame, layout[0]);
-    render_mode_widget(app, frame, layout[1]);
-    if let CurrentScreen::Exiting = app.current_screen {
-        render_exit_widget(frame);
+const THEME_COLOR: Color = tailwind::EMERALD.c500;
+
+impl Widget for &mut App {
+    fn render(self, area: prelude::Rect, buf: &mut prelude::Buffer) {
+        let layout =
+            Layout::vertical([Constraint::Percentage(90), Constraint::Percentage(10)]).split(area);
+
+        render_todo_widget(self, layout[0], buf);
+        render_info_widget(self, layout[1], buf);
     }
 }
 
-fn render_main_widget(app: &App, frame: &mut Frame, area: Rect) {
+fn render_todo_widget(app: &mut App, area: prelude::Rect, buf: &mut prelude::Buffer) {
     let main_block = Block::bordered()
         .title(" TODO ")
         .title_alignment(Alignment::Center)
         .border_type(BorderType::Rounded)
         .style(Style::default().fg(THEME_COLOR));
 
-    // Create main todo list widget
-    let list_items = build_list_items(app);
-    let todo_list = List::new(list_items).block(main_block);
+    let selected_idx = app.items.state.selected();
 
-    frame.render_widget(todo_list, area);
-}
-
-fn render_mode_widget(app: &App, frame: &mut Frame, area: Rect) {
-    let mode_block = Block::bordered()
-        .title(format!(
-            " Current Mode: {} ",
-            app.current_screen.to_string()
-        ))
-        .border_type(BorderType::Rounded)
-        .style(Style::default().fg(THEME_COLOR));
-
-    let mode_widget = Paragraph::new({
-        match app.current_screen {
-            CurrentScreen::Main => {
-                vec![
-                    Line::raw("[Enter] select mode, [q] or [Esc] to save and quit"),
-                ]
-            }
-            CurrentScreen::Selecting => {
-                vec![
-                    Line::raw(
-                        "[j] and [k] to navigate, [e]dit item, [n]ew item, [d]elete item, [c]omplete item, [q]uit" 
-                    ),
-                ]
-            }
-            CurrentScreen::Editing => vec![Line::raw("Press 'Enter' or 'Esc' to stop editing.")],
-            _ => vec![],
-        }
-    })
-    .block(mode_block);
-
-    frame.render_widget(mode_widget, area);
-}
-
-fn _render_help_widget(frame: &mut Frame) {
-    let popup_block = Block::bordered()
-        .title(" Help ")
-        .border_type(BorderType::Rounded)
-        .style(Style::default().fg(THEME_COLOR));
-
-    let exit_text = Line::styled("Test", Style::default().fg(THEME_COLOR));
-    let exit_paragraph = Paragraph::new(exit_text).block(popup_block);
-    let area = centered_rect(60, 25, frame.size());
-    frame.render_widget(exit_paragraph, area);
-}
-
-fn render_exit_widget(frame: &mut Frame) {
-    frame.render_widget(Clear, frame.size());
-    let popup_block = Block::bordered()
-        .title(" Exit ")
-        .border_type(BorderType::Rounded)
-        .style(Style::default().fg(THEME_COLOR));
-
-    let exit_text = Line::styled(
-        "Would you like to quit todo? (Y/N)",
-        Style::default().fg(THEME_COLOR),
-    );
-    let exit_paragraph = Paragraph::new(exit_text).block(popup_block);
-    let area = centered_rect(60, 25, frame.size());
-    frame.render_widget(exit_paragraph, area);
-}
-
-/// Build styled todo list items for ui
-fn build_list_items(app: &App) -> Vec<ListItem> {
-    app.todo_list
+    // Iterate through all elements in the `items` and stylize them.
+    let items: Vec<ListItem> = app
+        .items
+        .items
         .iter()
         .enumerate()
-        .map(|(idx, todo_item)| {
-            if app.selected == idx {
-                match app.current_screen {
-                    CurrentScreen::Selecting => {
-                        return ListItem::new(Line::styled(
-                            format!(" {} {}", todo_item.completion_box(), todo_item),
-                            Style::default().fg(Color::Black).bg(THEME_COLOR),
-                        ));
-                    }
-                    CurrentScreen::Editing => {
-                        return ListItem::new(Line::styled(
-                            format!(">{} {}_", todo_item.completion_box(), todo_item),
-                            Style::default().fg(Color::Black).bg(THEME_COLOR),
-                        ));
-                    }
-                    _ => {
-                        return ListItem::new(Line::styled(
-                            format!(" {} {}", todo_item.completion_box(), todo_item),
-                            Style::default().fg(THEME_COLOR),
-                        ));
-                    }
-                }
-            }
-            // Default item appearance
-            ListItem::new(Line::styled(
-                format!(" {} {}", todo_item.completion_box(), todo_item),
-                Style::default().fg(THEME_COLOR),
-            ))
+        .map(|(item_idx, todo_item)| {
+            todo_item.to_todo_list_item(selected_idx, item_idx, &app.current_mode)
         })
-        .collect()
+        .collect();
+
+    let todo_list_widget = List::new(items)
+        .block(main_block)
+        .highlight_style(
+            Style::default()
+                .add_modifier(Modifier::BOLD)
+                .add_modifier(Modifier::REVERSED),
+        )
+        .highlight_symbol(">")
+        .highlight_spacing(HighlightSpacing::Always);
+
+    StatefulWidget::render(todo_list_widget, area, buf, &mut app.items.state);
 }
 
-/// helper function to create a centered rect using up certain percentage of the available rect `r`
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    // Cut the given rectangle into three vertical pieces
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
+fn render_info_widget(app: &App, area: prelude::Rect, buf: &mut prelude::Buffer) {
+    let info_block = Block::bordered()
+        .title(format!(" Current Mode: {} ", app.current_mode))
+        .border_type(BorderType::Rounded)
+        .style(Style::default().fg(THEME_COLOR));
 
-    // Then cut the middle vertical piece into three width-wise pieces
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1] // Return the middle chunk
+    let info_widget = Paragraph::new({
+        match app.current_mode {
+            Mode::Selecting => {
+                vec![Line::raw(
+                    "[j] and [k] select item, [n]ew item, [c]omplete item, [h] unselect",
+                )]
+            }
+            Mode::Editing => {
+                vec![Line::raw("[Enter] or [Esc] to stop editing")]
+            }
+        }
+    })
+    .block(info_block);
+
+    Widget::render(info_widget, area, buf)
+}
+
+impl TodoItem {
+    fn to_todo_list_item(
+        &self,
+        selected_idx: Option<usize>,
+        item_idx: usize,
+        mode: &Mode,
+    ) -> ListItem {
+        let line = match self.status {
+            false => {
+                let text = if selected_idx.is_some()
+                    && selected_idx.unwrap() == item_idx
+                    && mode == &Mode::Editing
+                {
+                    format!(" ☐ {}_", self.item)
+                } else {
+                    format!(" ☐ {}", self.item)
+                };
+                Line::styled(text, Style::default())
+            }
+            true => {
+                let text = if selected_idx.is_some()
+                    && selected_idx.unwrap() == item_idx
+                    && mode == &Mode::Editing
+                {
+                    format!(" ✓ {}_", self.item)
+                } else {
+                    format!(" ✓ {}", self.item)
+                };
+                Line::styled(text, Style::default())
+            }
+        };
+
+        ListItem::new(line)
+    }
 }
