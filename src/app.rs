@@ -1,76 +1,172 @@
+use crossterm::event::{self, Event, KeyCode, KeyModifiers};
+use ratatui::{backend::Backend, widgets::ListState, Terminal};
 use serde::{Deserialize, Serialize};
-use std::{fmt, fs};
+use std::{fmt, io};
 
 #[derive(Debug)]
 pub struct App {
-    pub current_screen: CurrentScreen,
-    pub selected: usize,
-    pub todo_list: Vec<TodoItem>,
+    pub current_mode: Mode,
+    pub items: TodoList,
 }
 
 impl App {
     pub fn new() -> App {
         App {
-            current_screen: CurrentScreen::Main,
-            selected: 0,
-            todo_list: get_saved_list().unwrap_or_default(),
+            current_mode: Mode::Selecting,
+            items: TodoList::new(),
+        }
+    }
+    pub fn items(&self) -> &Vec<TodoItem> {
+        &self.items.items
+    }
+
+    pub fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> anyhow::Result<()> {
+        loop {
+            self.draw(terminal)?;
+
+            // Main app logic
+            if let Event::Key(key) = event::read()? {
+                // Skip key releases
+                if key.kind == event::KeyEventKind::Release {
+                    continue;
+                }
+
+                match self.current_mode {
+                    // Main screen
+                    Mode::Selecting => match key.code {
+                        KeyCode::Char('c') => match key.modifiers {
+                            KeyModifiers::CONTROL => return Ok(()),
+                            KeyModifiers::NONE => {
+                                if let Some(idx) = self.items.state.selected() {
+                                    self.items.items[idx].change_status()
+                                }
+                            }
+                            _ => {}
+                        },
+                        KeyCode::Esc | KeyCode::Char('q') => return Ok(()),
+                        KeyCode::Char('h') => self.items.unselect(),
+                        KeyCode::Char('j') | KeyCode::Down => self.items.next(),
+                        KeyCode::Char('k') | KeyCode::Up => self.items.previous(),
+                        KeyCode::Char('n') => {
+                            self.items.items.push(TodoItem::default());
+                            self.items.last_selected = self.items.state.selected();
+                            self.items.state.select(Some(self.items.items.len() - 1));
+                        }
+                        KeyCode::Char('d') => {
+                            if let Some(idx) = self.items.state.selected() {
+                                self.items.items.remove(idx);
+                                if self.items.items.is_empty() {
+                                    self.items.unselect()
+                                }
+                            }
+                        }
+                        KeyCode::Enter => {
+                            if self.items.state.selected().is_some() {
+                                self.current_mode = Mode::Editing
+                            }
+                        }
+                        _ => {}
+                    },
+                    // Editing mode. Can only enter mode if an item is selected.
+                    Mode::Editing => match (key.code, key.modifiers) {
+                        (KeyCode::Char('c') | KeyCode::Char('C'), KeyModifiers::CONTROL) => {
+                            return Ok(());
+                        }
+                        (KeyCode::Esc | KeyCode::Enter, _) => self.current_mode = Mode::Selecting,
+                        (KeyCode::Backspace | KeyCode::Delete, _) => {
+                            let item_idx = self.items.state.selected().unwrap();
+                            self.items.items[item_idx].item.pop();
+                        }
+                        (KeyCode::Char(char), _) => {
+                            let item_idx = self.items.state.selected().unwrap();
+                            self.items.items[item_idx].item.push(char);
+                        }
+                        _ => {}
+                    },
+                }
+            }
         }
     }
 
-    pub fn increment_selected(&mut self) {
-        if !self.todo_list.is_empty() && self.selected < self.todo_list.len() - 1 {
-            self.selected += 1;
-        }
-    }
-
-    // != because val < 0 is not possible with usize and it may error
-    pub fn decrement_selected(&mut self) {
-        if !self.todo_list.is_empty() && self.selected != 0 {
-            self.selected -= 1;
-        }
-    }
-
-    pub fn remove_completed_items(&mut self) {
-        self.todo_list = self
-            .todo_list
-            .clone()
-            .into_iter()
-            .filter(|x| !x.completed)
-            .collect();
-        if self.selected >= self.todo_list.len() && !self.todo_list.is_empty() {
-            self.selected = self.todo_list.len() - 1;
-        }
-    }
-
-    pub fn remove_empty_items(&mut self) {
-        self.todo_list = self
-            .todo_list
-            .clone()
-            .into_iter()
-            .filter(|x| x.item.trim() != "")
-            .collect();
-        if self.selected >= self.todo_list.len() && !self.todo_list.is_empty() {
-            self.selected = self.todo_list.len() - 1;
-        }
+    fn draw(&mut self, terminal: &mut Terminal<impl Backend>) -> io::Result<()> {
+        terminal.draw(|f| f.render_widget(self, f.size()))?;
+        Ok(())
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub enum CurrentScreen {
+pub enum Mode {
     Editing,
-    Exiting,
-    Main,
     Selecting,
 }
 
-impl ToString for CurrentScreen {
-    fn to_string(&self) -> String {
+impl fmt::Display for Mode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Editing => String::from("Editing"),
-            Self::Exiting => String::from("Exiting"),
-            Self::Main => String::from("Main"),
-            Self::Selecting => String::from("Selecting"),
+            Self::Editing => write!(f, "Editing"),
+            Self::Selecting => write!(f, "Selecting"),
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct TodoList {
+    pub state: ListState,
+    pub items: Vec<TodoItem>,
+    pub last_selected: Option<usize>,
+}
+
+impl TodoList {
+    fn new() -> TodoList {
+        TodoList {
+            state: ListState::default(),
+            items: vec![TodoItem::new("test", false), TodoItem::new("test2", false)],
+            last_selected: None,
+        }
+    }
+
+    fn next(&mut self) {
+        if self.items.is_empty() {
+            return;
+        }
+
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => self.last_selected.unwrap_or(0),
+        };
+
+        self.state.select(Some(i));
+    }
+
+    fn previous(&mut self) {
+        if self.items.is_empty() {
+            return;
+        }
+
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => self.last_selected.unwrap_or(0),
+        };
+        self.state.select(Some(i));
+    }
+
+    fn unselect(&mut self) {
+        let offset = self.state.offset();
+        self.last_selected = self.state.selected();
+        self.state.select(None);
+        *self.state.offset_mut() = offset;
     }
 }
 
@@ -82,64 +178,19 @@ struct TodoItems {
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct TodoItem {
-    item: String,
-    pub completed: bool,
+    pub item: String,
+    pub status: bool,
 }
 
 impl TodoItem {
-    pub fn completion_box(&self) -> &str {
-        if self.completed {
-            return "[x]";
+    fn new(item: &str, status: bool) -> Self {
+        TodoItem {
+            item: item.to_string(),
+            status,
         }
-        "[ ]"
     }
 
-    pub fn mark_item(&mut self) {
-        self.completed = !self.completed
+    fn change_status(&mut self) {
+        self.status = !self.status;
     }
-
-    pub fn push(&mut self, c: char) {
-        self.item.push(c)
-    }
-
-    pub fn pop(&mut self) {
-        self.item.pop();
-    }
-}
-
-impl fmt::Display for TodoItem {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.item)
-    }
-}
-
-/// Get saved items from todo_list.json
-/// Note that path to todo_list.json may not work on windows (/ instead of \\)
-fn get_saved_list() -> anyhow::Result<Vec<TodoItem>> {
-    let path = format!(
-        "{}/todo",
-        dirs::config_dir()
-            .expect("Could not find config dir")
-            .to_str()
-            .unwrap()
-    );
-    std::fs::create_dir_all(&path)?;
-    let json = String::from_utf8(fs::read(format!("{}/todo_list.json", path))?)?;
-    let saved_items: TodoItems = serde_json::from_str(&json)?;
-    Ok(saved_items.items)
-}
-
-// Write items to todo_list.json
-pub fn save_todo_list(todo_list: Vec<TodoItem>) -> anyhow::Result<()> {
-    let path = format!(
-        "{}/todo/todo_list.json",
-        dirs::config_dir()
-            .expect("Could not find config dir")
-            .to_str()
-            .unwrap()
-    );
-    let save_items = TodoItems { items: todo_list };
-    fs::write(path, serde_json::to_string(&save_items).unwrap())?;
-
-    Ok(())
 }
