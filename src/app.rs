@@ -10,14 +10,11 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> App {
+    pub fn new(items: Vec<TodoItem>) -> App {
         App {
             current_mode: Mode::Selecting,
-            items: TodoList::new(),
+            items: TodoList::from_items(items),
         }
-    }
-    pub fn items(&self) -> &Vec<TodoItem> {
-        &self.items.items
     }
 
     pub fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> anyhow::Result<()> {
@@ -117,10 +114,18 @@ pub struct TodoList {
 }
 
 impl TodoList {
-    fn new() -> TodoList {
+    fn _new() -> Self {
         TodoList {
             state: ListState::default(),
-            items: vec![TodoItem::new("test", false), TodoItem::new("test2", false)],
+            items: Vec::new(),
+            last_selected: None,
+        }
+    }
+
+    pub fn from_items(items: Vec<TodoItem>) -> Self {
+        TodoList {
+            state: ListState::default(),
+            items,
             last_selected: None,
         }
     }
@@ -173,7 +178,7 @@ impl TodoList {
 // Struct used for deserializing saved data
 #[derive(Debug, Default, Deserialize, Serialize)]
 struct TodoItems {
-    items: Vec<TodoItem>,
+    pub items: Vec<TodoItem>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -183,7 +188,7 @@ pub struct TodoItem {
 }
 
 impl TodoItem {
-    fn new(item: &str, status: bool) -> Self {
+    fn _new(item: &str, status: bool) -> Self {
         TodoItem {
             item: item.to_string(),
             status,

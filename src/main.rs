@@ -1,9 +1,12 @@
 mod app;
 mod ui;
 
-use std::io::{self, stdout, Stdout};
+use std::{
+    fs,
+    io::{self, stdout, Stdout},
+};
 
-use app::App;
+use app::{App, TodoItem, TodoList};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
@@ -18,10 +21,12 @@ fn main() -> anyhow::Result<()> {
     let mut terminal = init_terminal()?;
 
     // Setup app
-    let result = App::new().run(&mut terminal);
+    let saved_items = get_saved_list().unwrap_or_default();
+    let mut app = App::new(saved_items);
+    let result = app.run(&mut terminal);
 
     // Save list data
-    // save_todo_list(app.todo_list)?;
+    save_todo_list(app.items)?;
 
     // Restore terminal
     restore_terminal()?;
@@ -44,5 +49,34 @@ pub fn init_terminal() -> anyhow::Result<Tui> {
 pub fn restore_terminal() -> anyhow::Result<()> {
     disable_raw_mode()?;
     execute!(stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+    Ok(())
+}
+
+/// Get saved items from todo_list.json
+/// Note that path to todo_list.json may not work on windows (/ instead of \\)
+fn get_saved_list() -> anyhow::Result<Vec<TodoItem>> {
+    let path = format!(
+        "{}/todo",
+        dirs::config_dir()
+            .expect("Could not find config dir")
+            .to_str()
+            .unwrap()
+    );
+    std::fs::create_dir_all(&path)?;
+    let json = String::from_utf8(fs::read(format!("{}/todo_list.json", path))?)?;
+    let saved_items: Vec<TodoItem> = serde_json::from_str(&json)?;
+    Ok(saved_items)
+}
+// Write items to todo_list.json
+pub fn save_todo_list(todo_list: TodoList) -> anyhow::Result<()> {
+    let path = format!(
+        "{}/todo/todo_list.json",
+        dirs::config_dir()
+            .expect("Could not find config dir")
+            .to_str()
+            .unwrap()
+    );
+    let save_items: Vec<TodoItem> = todo_list.items;
+    fs::write(path, serde_json::to_string(&save_items).unwrap())?;
     Ok(())
 }
