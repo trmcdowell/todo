@@ -11,7 +11,7 @@ use ratatui::{
 
 use crate::app::{App, Mode, TodoItem};
 
-const THEME_COLOR: Color = tailwind::EMERALD.c500;
+const THEME_COLOR: Color = tailwind::SKY.c500;
 
 impl Widget for &mut App {
     fn render(self, area: prelude::Rect, buf: &mut prelude::Buffer) {
