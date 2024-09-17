@@ -4,7 +4,8 @@ use ratatui::{
     style::{palette::tailwind, Color, Modifier, Style},
     text::Line,
     widgets::{
-        Block, BorderType, HighlightSpacing, List, ListItem, Paragraph, StatefulWidget, Widget,
+        Block, BorderType, Borders, HighlightSpacing, List, ListItem, Paragraph, StatefulWidget,
+        Widget,
     },
 };
 
@@ -27,9 +28,8 @@ fn render_todo_widget(app: &mut App, area: prelude::Rect, buf: &mut prelude::Buf
         .title(" TODO ")
         .title_alignment(Alignment::Center)
         .border_type(BorderType::Rounded)
+        .borders(Borders::ALL)
         .style(Style::default().fg(THEME_COLOR));
-
-    let selected_idx = app.items.state.selected();
 
     // Iterate through all elements in the `items` and stylize them.
     let items: Vec<ListItem> = app
@@ -38,7 +38,7 @@ fn render_todo_widget(app: &mut App, area: prelude::Rect, buf: &mut prelude::Buf
         .iter()
         .enumerate()
         .map(|(item_idx, todo_item)| {
-            todo_item.to_todo_list_item(selected_idx, item_idx, &app.current_mode)
+            todo_item.to_list_item(app.items.state.selected(), item_idx, &app.current_mode)
         })
         .collect();
 
@@ -59,6 +59,7 @@ fn render_info_widget(app: &App, area: prelude::Rect, buf: &mut prelude::Buffer)
     let info_block = Block::bordered()
         .title(format!(" Current Mode: {} ", app.current_mode))
         .border_type(BorderType::Rounded)
+        .borders(Borders::ALL)
         .style(Style::default().fg(THEME_COLOR));
 
     let info_widget = Paragraph::new({
@@ -79,14 +80,10 @@ fn render_info_widget(app: &App, area: prelude::Rect, buf: &mut prelude::Buffer)
 }
 
 impl TodoItem {
-    fn to_todo_list_item(
-        &self,
-        selected_idx: Option<usize>,
-        item_idx: usize,
-        mode: &Mode,
-    ) -> ListItem {
+    fn to_list_item(&self, selected_idx: Option<usize>, item_idx: usize, mode: &Mode) -> ListItem {
         let line = match self.status {
             false => {
+                // Check if editing cursor is needed for line
                 let text = if selected_idx.is_some()
                     && selected_idx.unwrap() == item_idx
                     && mode == &Mode::Editing

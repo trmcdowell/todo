@@ -54,6 +54,8 @@ impl App {
                                 self.items.items.remove(idx);
                                 if self.items.items.is_empty() {
                                     self.items.unselect()
+                                } else if idx == self.items.items.len() {
+                                    self.items.state.select(Some(idx - 1));
                                 }
                             }
                         }
