@@ -29,7 +29,7 @@ fn main() -> anyhow::Result<()> {
     restore_terminal()?;
 
     // Save list state data
-    save_todo_list(app.items)?;
+    save_todo_list(app.todo_list)?;
 
     // Print error if one occured
     if let Err(e) = result {

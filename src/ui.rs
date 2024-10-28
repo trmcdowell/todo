@@ -31,14 +31,14 @@ fn render_todo_widget(app: &mut App, area: prelude::Rect, buf: &mut prelude::Buf
         .borders(Borders::ALL)
         .style(Style::default().fg(THEME_COLOR));
 
-    // Iterate through all elements in the `items` and stylize them.
+    // Iterate through all elements in the `items` and style them.
     let items: Vec<ListItem> = app
-        .items
+        .todo_list
         .items
         .iter()
         .enumerate()
         .map(|(item_idx, todo_item)| {
-            todo_item.to_list_item(app.items.state.selected(), item_idx, &app.current_mode)
+            todo_item.to_list_item(app.todo_list.state.selected(), item_idx, &app.current_mode)
         })
         .collect();
 
@@ -52,7 +52,7 @@ fn render_todo_widget(app: &mut App, area: prelude::Rect, buf: &mut prelude::Buf
         .highlight_symbol(">")
         .highlight_spacing(HighlightSpacing::Always);
 
-    StatefulWidget::render(todo_list_widget, area, buf, &mut app.items.state);
+    StatefulWidget::render(todo_list_widget, area, buf, &mut app.todo_list.state);
 }
 
 fn render_info_widget(app: &App, area: prelude::Rect, buf: &mut prelude::Buffer) {

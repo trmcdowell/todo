@@ -6,14 +6,14 @@ use std::{fmt, io};
 #[derive(Debug)]
 pub struct App {
     pub current_mode: Mode,
-    pub items: TodoList,
+    pub todo_list: TodoList,
 }
 
 impl App {
     pub fn new(items: Vec<TodoItem>) -> App {
         App {
             current_mode: Mode::Selecting,
-            items: TodoList::from_items(items),
+            todo_list: TodoList::from_items(items),
         }
     }
 
@@ -34,33 +34,35 @@ impl App {
                         KeyCode::Char('c') => match key.modifiers {
                             KeyModifiers::CONTROL => return Ok(()),
                             KeyModifiers::NONE => {
-                                if let Some(idx) = self.items.state.selected() {
-                                    self.items.items[idx].change_status()
+                                if let Some(idx) = self.todo_list.state.selected() {
+                                    self.todo_list.items[idx].change_status()
                                 }
                             }
                             _ => {}
                         },
                         KeyCode::Esc | KeyCode::Char('q') => return Ok(()),
-                        KeyCode::Char('h') => self.items.unselect(),
-                        KeyCode::Char('j') | KeyCode::Down => self.items.next(),
-                        KeyCode::Char('k') | KeyCode::Up => self.items.previous(),
+                        KeyCode::Char('h') => self.todo_list.unselect(),
+                        KeyCode::Char('j') | KeyCode::Down => self.todo_list.next(),
+                        KeyCode::Char('k') | KeyCode::Up => self.todo_list.previous(),
                         KeyCode::Char('n') => {
-                            self.items.items.push(TodoItem::default());
-                            self.items.last_selected = self.items.state.selected();
-                            self.items.state.select(Some(self.items.items.len() - 1));
+                            self.todo_list.items.push(TodoItem::default());
+                            self.todo_list.last_selected = self.todo_list.state.selected();
+                            self.todo_list
+                                .state
+                                .select(Some(self.todo_list.items.len() - 1));
                         }
                         KeyCode::Char('d') => {
-                            if let Some(idx) = self.items.state.selected() {
-                                self.items.items.remove(idx);
-                                if self.items.items.is_empty() {
-                                    self.items.unselect()
-                                } else if idx == self.items.items.len() {
-                                    self.items.state.select(Some(idx - 1));
+                            if let Some(idx) = self.todo_list.state.selected() {
+                                self.todo_list.items.remove(idx);
+                                if self.todo_list.items.is_empty() {
+                                    self.todo_list.unselect()
+                                } else if idx == self.todo_list.items.len() {
+                                    self.todo_list.state.select(Some(idx - 1));
                                 }
                             }
                         }
                         KeyCode::Enter => {
-                            if self.items.state.selected().is_some() {
+                            if self.todo_list.state.selected().is_some() {
                                 self.current_mode = Mode::Editing
                             }
                         }
@@ -73,12 +75,12 @@ impl App {
                         }
                         (KeyCode::Esc | KeyCode::Enter, _) => self.current_mode = Mode::Selecting,
                         (KeyCode::Backspace | KeyCode::Delete, _) => {
-                            let item_idx = self.items.state.selected().unwrap();
-                            self.items.items[item_idx].text.pop();
+                            let item_idx = self.todo_list.state.selected().unwrap();
+                            self.todo_list.items[item_idx].text.pop();
                         }
                         (KeyCode::Char(char), _) => {
-                            let item_idx = self.items.state.selected().unwrap();
-                            self.items.items[item_idx].text.push(char);
+                            let item_idx = self.todo_list.state.selected().unwrap();
+                            self.todo_list.items[item_idx].text.push(char);
                         }
                         _ => {}
                     },
