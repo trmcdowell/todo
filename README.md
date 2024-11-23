@@ -1,2 +1,2 @@
 # todo
-A terminal based to do list application written in Rust.
+A terminal based to do list application
